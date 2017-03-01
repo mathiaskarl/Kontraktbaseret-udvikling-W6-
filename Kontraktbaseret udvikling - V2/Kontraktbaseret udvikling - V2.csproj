@@ -57,6 +57,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataModels\Ai.cs" />
     <Compile Include="DataModels\Player.cs" />
     <Compile Include="Enums\GameResult.cs" />
     <Compile Include="Enums\GameType.cs" />
@@ -65,12 +66,15 @@
     <Compile Include="Exceptions.cs" />
     <Compile Include="GameController.cs" />
     <Compile Include="GameLogic.cs" />
+    <Compile Include="GameTypes\BestOf.cs" />
+    <Compile Include="GameTypes\Classic.cs" />
+    <Compile Include="GameTypes\GameType.cs" />
+    <Compile Include="GameTypes\Tournament.cs" />
     <Compile Include="Input.cs" />
     <Compile Include="Interfaces\IPlayer.cs" />
     <Compile Include="Output.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Tournament.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

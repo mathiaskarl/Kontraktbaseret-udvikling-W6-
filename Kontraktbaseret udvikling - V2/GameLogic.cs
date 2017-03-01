@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Kontraktbaseret_udvikling___V2.DataModels;
 using Kontraktbaseret_udvikling___V2.Enums;
+using Kontraktbaseret_udvikling___V2.Interfaces;
 
 namespace Kontraktbaseret_udvikling___V2
 {
@@ -14,11 +15,11 @@ namespace Kontraktbaseret_udvikling___V2
         * Invariant 
         *   Players                     != null
         */
-        public List<Player> Players             { get; private set; }
-        private Queue<Player> _playerQueue;
+        public List<IPlayer> Players             { get; private set; }
+        private Queue<IPlayer> _playerQueue;
 
         public GameResult? GameResult           { get; private set; }
-        public List<Player> GameWinners         { get; private set; }
+        public List<IPlayer> GameWinners         { get; private set; }
 
         /*
         * Invariant 
@@ -31,8 +32,6 @@ namespace Kontraktbaseret_udvikling___V2
 
         /*
         * Creation Command 
-        * Signature: 
-        *   void Initialize()
         * Ensure:
         *   Players                     = new List<Player>()
         *   PlayersLimit                = 2
@@ -44,15 +43,13 @@ namespace Kontraktbaseret_udvikling___V2
 
         private void Initialize()
         {
-            this.Players        = new List<Player>();
+            this.Players        = new List<IPlayer>();
             this.PlayerLimit    = 2;
             this._random        = new Random();
         }
 
         /*
         * Command 
-        * Signature: 
-        *   void SetCustomPlayerAmount(int i)
         * Require:
         *   IsStarted                   = false
         *   i                           >= 2
@@ -61,19 +58,11 @@ namespace Kontraktbaseret_udvikling___V2
         */
         public void SetCustomPlayerAmount(int i)
         {
-            if (this.IsStarted)
-                throw new GameAlreadyStartedException();
-
-            if (i < 2)
-                throw new InvalidPlayerAmountException();
-
             this.PlayerLimit = i;
         }
 
         /*
         * Command 
-        * Signature: 
-        *   void CreateNewPlayer(string name, PlayerType type)
         * Require:
         *   IsStarted                   = false
         *   IsPlayerListFull            = false
@@ -83,20 +72,19 @@ namespace Kontraktbaseret_udvikling___V2
         */
         public void CreateNewPlayer(string name, PlayerType type)
         {
-            if(this.IsPlayerListFull())
-                throw new PlayerListFullException();
+            var player =  type == PlayerType.Human
+                ? (IPlayer)new Player(
+                    id: (this.Players.Count + 1),
+                    name: name)
+                : (IPlayer)new Ai(
+                    id: (this.Players.Count + 1),
+                    name: name);
 
-            this.Players.Add(new Player(
-                id:     (this.Players.Count + 1),
-                name:   name,
-                type:   type
-            ));
+            this.Players.Add(player);
         }
 
         /*
         * Command 
-        * Signature: 
-        *   void AddExistingPlayer(Player player)
         * Require:
         *   IsStarted                   = false
         *   IsPlayerListFull            = false
@@ -104,18 +92,13 @@ namespace Kontraktbaseret_udvikling___V2
         *   Players.Count               = old Players.Count + 1
         *   Player.Last                 = player
         */
-        public void AddExistingPlayer(Player player)
+        public void AddExistingPlayer(IPlayer player)
         {
-            if (this.IsPlayerListFull())
-                throw new PlayerListFullException();
-
             this.Players.Add(player);
         }
 
         /*
         * Command 
-        * Signature: 
-        *   void StartGame()
         * Require:
         *   IsStarted                   = false
         *   IsPlayerListFull            = true
@@ -125,78 +108,55 @@ namespace Kontraktbaseret_udvikling___V2
         */
         public void StartGame()
         {
-            if(this.IsStarted)
-                throw new GameAlreadyStartedException();
-
-            if (!this.IsPlayerListFull())
-                throw new PlayerListNotFullException();
-
             this.QueuePlayers();
             this.IsStarted = true;
         }
 
         private void QueuePlayers()
         {
-            this._playerQueue = new Queue<Player>(this.Players);
+            this._playerQueue = new Queue<IPlayer>(this.Players);
         }
 
         /*
         * Command 
-        * Signature: 
-        *   void AssignPlayerPick(Pick pick = Pick.Default)
         * Require:
         *   IsStarted                   = true
         *   IsPlayerQueueEmpty          = false
-        *   _playerQueue.First.PlayerType = PlayerType.Human implies:
-        *       pick                    != Pick.Default
         * Ensure:
-        *   _playerQueue.First.Pick     = pick
+        *   old _playerQueue.First.Pick     = pick
         *   _playerQueue.Count          = old _playerQueue.Count - 1
+        *
+        * Frame rule:
+        *   For all i : 0 < old _playerQueue.Count - 1
+        *       _playerQueue[i] = old _playerQueue[i]
         */
-        public void AssignPlayerPick(Pick pick = Pick.Default)
+        public void AssignPlayerPick(Pick pick)
         {
-            if (!this.IsStarted)
-                throw new GameNotStartedException();
-
-            if (this.IsPlayerQueueEmpty())
-                throw new NoPlayersLeftInQueueException();
-
             var currentPlayer = this._playerQueue.Dequeue();
-
-            if (currentPlayer.PlayerType == PlayerType.Human)
-            {
-                if (pick == Pick.Default)
-                    throw new InvalidPlayerPickException();
-            }
-            else
-                pick = this.GenerateRandomPick();
-
-            currentPlayer.Pick = pick;
+            currentPlayer.AssignPick(pick);
         }
 
         /*
         * Command 
-        * Signature: 
-        *   void DetermineGameResult()
         * Require:
         *   IsStarted                   = true
         *   IsPlayerQueueEmpty          = true
         * Ensure:
         *   IsStarted                   = false
         *   GameWinners                 != null
-        *   GameResult                  = GameResult.Win implies
-                                            For all Players in Winners
-                                                Player.Wins = old Player.Wins + 1
-                                        || GameResult.Draw          
+        *   GameResult                  = GameResult.Win || GameResult.Draw
+        *   GameResult = GameResult.Win implies
+        *       For all players in GameWinners
+        *           Player.Wins = old Player.Wins + 1
+        *
+        * Frame rule:
+        *   GameResult = GameResult.Draw implies
+        *       For all i : 0 < Players.Count
+        *           Players[i] = old Players[i]
+        *
         */
         public void DetermineGameResult()
         {
-            if (!this.IsStarted)
-                throw new GameNotStartedException();
-
-            if (!this.IsPlayerQueueEmpty())
-                throw new PlayersLeftInQueueException();
-
             var playerPicks = this.GeneratePlayerPickList();
 
             this.GameResult = (playerPicks.Count == 2 ? Enums.GameResult.Win : Enums.GameResult.Draw);
@@ -211,15 +171,13 @@ namespace Kontraktbaseret_udvikling___V2
                     player.Wins++;
             }
             else
-                this.GameWinners = new List<Player>();
+                this.GameWinners = new List<IPlayer>();
 
             this.IsStarted = false;
         }
 
         /*
         * Command 
-        * Signature: 
-        *   void ResetGameResults()
         * Require:
         *   Players                     != null
         *   IsStarted                   = false
@@ -236,29 +194,19 @@ namespace Kontraktbaseret_udvikling___V2
 
         /*
         * Derived Query 
-        * Signature: 
-        *   Player GetNextPlayer()
         * Requires:
         *   IsStarted                   = true
         *   IsPlayerQueueEmpty()        = false
         * Ensure:
         *   Result                      = _playerQueue.Peek()
         */
-        public Player GetNextPlayer()
+        public IPlayer GetNextPlayer()
         {
-            if(!this.IsStarted) 
-                throw new GameNotStartedException();
-
-            if (this.IsPlayerQueueEmpty())
-                throw new NoPlayersLeftInQueueException();
-
             return this._playerQueue.Peek();
         }
 
         /*
         * Derived Query 
-        * Signature: 
-        *   bool IsWinnerFound()
         * Ensure:
         *   Result                      = (GetPlayersWithMaxWins() < 2)
         */
@@ -269,20 +217,16 @@ namespace Kontraktbaseret_udvikling___V2
 
         /*
         * Query 
-        * Signature: 
-        *   List<Player> GetPlayersWithMaxWins()
         * Require:
         *   Players                     != null
         */
-        public List<Player> GetPlayersWithMaxWins()
+        public List<IPlayer> GetPlayersWithMaxWins()
         {
             return this.Players.FindAll(x => x.Wins == this.Players.Max(z => z.Wins));
         }
 
         /*
         * Query 
-        * Signature: 
-        *   bool IsPlayerQueueEmpty()
         * Require:
         *   _playerQueue                != null
         */
@@ -293,8 +237,6 @@ namespace Kontraktbaseret_udvikling___V2
 
         /*
         * Query 
-        * Signature: 
-        *   bool IsPlayerListFull()
         * Require:
         *   Players                     != null
         *   PlayerLimit                 != null
@@ -304,20 +246,15 @@ namespace Kontraktbaseret_udvikling___V2
             return this.Players.Count == this.PlayerLimit;
         }
 
-        private Pick GenerateRandomPick()
+        private Dictionary<Pick, List<IPlayer>> GeneratePlayerPickList()
         {
-            return (Pick) this._random.Next(1, 4);
-        }
-
-        private Dictionary<Pick, List<Player>> GeneratePlayerPickList()
-        {
-            var dic = new Dictionary<Pick, List<Player>>();
+            var dic = new Dictionary<Pick, List<IPlayer>>();
 
             foreach (var player in this.Players)
                 if (dic.ContainsKey(player.Pick))
                     dic[player.Pick].Add(player);
                 else
-                    dic.Add(player.Pick, new List<Player>() { player });
+                    dic.Add(player.Pick, new List<IPlayer>() { player });
 
             return dic;
         }

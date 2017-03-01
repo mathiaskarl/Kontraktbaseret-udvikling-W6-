@@ -1,23 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Kontraktbaseret_udvikling___V2.DataModels;
+using Kontraktbaseret_udvikling___V2.Interfaces;
 
-namespace Kontraktbaseret_udvikling___V2
+namespace Kontraktbaseret_udvikling___V2.GameTypes
 {
-    public class Tournament
+    public class Tournament : GameType
     {
-        private List<Player> _players;
-        private Action<Player, Player> _game;
-         
-        public Tournament(Action<Player, Player> game)
+        public Tournament(GameLogic game)
         {
             this._game = game;
+
+            this.Start(this._game.Players);
+
+            Output.GameResults();
+
+            Output.CurrentResults(this._game.Players);
         }
 
-        public void Start(List<Player> players)
+        private void Start(List<IPlayer> players)
         {
             foreach (var player in players)
                 player.ResetHasPlayedAgainst();
@@ -37,7 +37,7 @@ namespace Kontraktbaseret_udvikling___V2
                 if (enemy == null)
                     throw new PlayerNotFoundException();
 
-                this._game(player, enemy);
+                this.Game(player, enemy);
 
                 player.AddPlayedAgainst(enemy);
                 enemy.AddPlayedAgainst(player);
@@ -49,9 +49,30 @@ namespace Kontraktbaseret_udvikling___V2
                 this.Start(players);
         }
 
-        public List<Player> GetPlayersWithMaxWins(List<Player> players)
+        private List<IPlayer> GetPlayersWithMaxWins(List<IPlayer> players)
         {
             return players.FindAll(x => x.Wins == players.Max(z => z.Wins));
+        }
+
+        private void Game(IPlayer player, IPlayer enemy)
+        {
+            var game = new GameLogic();
+            game.SetCustomPlayerAmount(2);
+
+            foreach (var obj in new[] { player, enemy })
+                game.AddExistingPlayer(obj);
+
+            game.StartGame();
+
+            this.AssignPlayerPicks(game, () => Output.MatchUp(player, enemy));
+
+            game.DetermineGameResult();
+
+            this.ShowGameResults(game);
+            Output.CurrentResults(this._game.Players);
+
+            Output.PressAnythingToContinue();
+            Input.PressAnything();
         }
     }
 }

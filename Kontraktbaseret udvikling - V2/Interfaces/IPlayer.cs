@@ -12,6 +12,49 @@ namespace Kontraktbaseret_udvikling___V2.Interfaces
     {
         int Id                  { get; }
         string Name             { get; }
-        PlayerType PlayerType   { get; }
+        Pick Pick               { get; set; }
+
+        /*
+        * Invariant 
+        *   Wins                        >= 0
+        */
+        int Wins { get; set; }
+
+        /*
+        * Invariant 
+        *   AmountOfGames               >= 0
+        */
+        int AmountOfGames { get; set; }
+
+        /*
+        * Invariant 
+        *   HasPlayedAgainst            != 0
+        */
+        List<IPlayer> HasPlayedAgainst { get; }
+
+        /*
+        * Command 
+        * Requre:
+        *   HasPlayedAgainst.Contains(player) != false
+        * Ensure:
+        *   HasPlayedAgainst.Contains(player) = true
+        *   AmountOfGames                     = old AmountOfGames + 1
+        */
+        void AddPlayedAgainst(IPlayer player);
+
+        /*
+        * Command 
+        * Ensure:
+        *   HasPlayedAgainst                  = new List<Player>()
+        *   AmountOfGames                     = 0
+        */
+        void ResetHasPlayedAgainst();
+
+        /*
+        * Command 
+        * Ensure:
+        *   Pick                              = pick
+        */
+        void AssignPick(Pick pick);
     }
 }

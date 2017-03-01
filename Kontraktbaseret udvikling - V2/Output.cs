@@ -5,12 +5,13 @@ using System.Text;
 using System.Threading.Tasks;
 using Kontraktbaseret_udvikling___V2.DataModels;
 using Kontraktbaseret_udvikling___V2.Enums;
+using Kontraktbaseret_udvikling___V2.Interfaces;
 
 namespace Kontraktbaseret_udvikling___V2
 {
     public class Output
     {
-        public static void GameTiedExtension(List<Player> players)
+        public static void GameTiedExtension(List<IPlayer> players)
         {
             Console.WriteLine("\nThe game was a tie between:");
             foreach(var player in players)
@@ -107,7 +108,7 @@ namespace Kontraktbaseret_udvikling___V2
             Console.WriteLine("- Type a number between {0} and {1}.", from, to);
         }
 
-        public static void NextPlayerTurn(Player player)
+        public static void NextPlayerTurn(IPlayer player)
         {
             Console.WriteLine("Your turn {0} - Please choose your pick", player.Name);
             Console.WriteLine("- Type 1 for Scissor");
@@ -137,27 +138,27 @@ namespace Kontraktbaseret_udvikling___V2
             Console.WriteLine("-------------You have chosen {0}-------------\n", gameType);
         }
 
-        public static void MatchUp(Player player, Player enemy)
+        public static void MatchUp(IPlayer player, IPlayer enemy)
         {
             Console.Clear();
             Console.WriteLine("-------------{0} vs {1}-------------\n", player.Name, enemy.Name);
         }
 
-        public static void CurrentResults(List<Player> players)
+        public static void CurrentResults(List<IPlayer> players)
         {
             Console.WriteLine("\n-----------Current standings:------------\n");
             foreach (var player in players)
                 Console.WriteLine("{0}: {1} win{2}.", player.Name, player.Wins, player.Wins > 1 ? "s" : "");
         }
 
-        public static void PlayerResult(List<Player> players)
+        public static void PlayerResult(List<IPlayer> players)
         {
             Console.WriteLine("\n-------------Player picks:---------------\n");
             foreach (var player in players)
                 Console.WriteLine("{0} picked: {1}", player.Name, player.Pick);
         }
 
-        public static void Winner(List<Player> players)
+        public static void Winner(List<IPlayer> players)
         {
             Console.Clear();
             Console.WriteLine("-----------------------------------------");
